@@ -1,0 +1,107 @@
+---
+title: "vignette"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(AlphaFoldMVN)
+```
+
+# $\alpha-$transformation
+
+Suppose $\xv\in\mathbb{S}^{D-1}$. Let's start from centred log-ratio transformation:
+
+$$
+\wv_0(\xv) = \biggl(\log\biggl(\frac{x_j}{\prod_{d=1}^Dx_d^{1/D}}\biggr)\biggr)_{j=1, \dots, D}
+$$
+
+The space wher $\wv^0$ reside is
+
+$$
+\mathbb{Q}_0^{D-1} = \biggl\{\wv_0: \sum_{d=1}^D w_{0d} = 0\biggr\}
+$$
+
+$\alpha-$transformation is en generalized centred log-ratio transformation, which has
+
+$$
+\uv_\alpha(\xv) = \biggl(\frac{x_j^\alpha}{\sum_{d=1}^Dx_d^\alpha}\biggr)_{j=1, \dots, D}
+$$
+
+$$
+\wv_\alpha(\xv) = \frac{D\uv_\alpha - 1 }{\alpha}
+$$
+
+As $\alpha\to 0$, the transformation above is centred log ratio. For instance
+
+```{r}
+set.seed(42)
+
+X <- LaplacesDemon::rdirichlet(n=5000, alpha = c(1,1,1))
+
+alphas <- c(1, 0.5, 0.25, 0, -0.25, -0.5, -1)
+W_alpha <- do.call(
+  rbind,
+  lapply(alphas, function(a) alpha_trans(X, alpha = a) + a*2)
+)
+
+plotly::plot_ly(x = W_alpha[,1], y = W_alpha[,2], z = W_alpha[,3],
+        type = "scatter3d",
+        mode = "markers",
+        marker = list(size = 2, color = rep(1:7, each = nrow(X-1)),colorscale = "Viridis"))
+```
+
+The points are all on a hyperplane orthogonal to $\mathbf{1}_{D} = (1,1,\dots, 1)$. For visualization, we shift these planes by $2\alpha$ along $\mathbf{1}_{D}$. We can project them to the complementary space of $\mathbf{1}_{D}$ by the Helmart sub matrix.
+
+$$
+\yv = \zv_\alpha(\xv) = \Hv\wv_\alpha
+$$
+
+Let's further look these points:
+
+```{r}
+
+H <- helmert(3)
+
+Z_alpha <- W_alpha %*% t(H)
+plotly::plot_ly(x = Z_alpha[,1], y = Z_alpha[,2], z = rep(c(1,0.5, 0.25, 0, -0.25, -0.5, -1), each = nrow(X)),
+                type = "scatter3d",
+                mode = "markers",
+                marker = list(size = 5, color = rep(1:7, each = nrow(X)),colorscale = "Viridis"))
+```
+
+Naturally , we have the inverse transformation. Now let's look at the inverse process. As we have
+
+$$
+\yv \in \mathbb{Q}_\alpha^{D-1} = \biggl\{\Hv\wv: -\frac{1}{\alpha}<w_{d}<\frac{D-1}{\alpha}, \sum_{d=1}^D w_d = 0\biggr\}
+$$
+
+we can easily see the inverse is
+
+$$
+\xv = \bigg(\frac{(1+\alpha \pi_j(\Hv'\yv))^\frac{1}{\alpha}}{\sum_{d=1}^D (1+\alpha \pi_d(\Hv'\yv))^\frac{1}{\alpha}}\biggr)_{j=1, \dots, D}
+$$
+
+Focus on the transformation between $X$ and $W$. We can see
+
+```{r}
+do.call(
+  c,
+  lapply(alphas, function(a) sum(which(alpha_inverse(alpha_trans(X= X, alpha = a), alpha = a) - X > 1e-8)))
+)
+```
+
+The results validate the inverse.
+
+# $\alpha-$folding
+There is one thing we need to pay attention to: the inverse function above works for only $\yv\in\mathbb{Q}_\alpha^{D-a}$. Therefore, for any points outside of the 'triangle' in the plots, there is no interpretation for what the inverse transformation does. If we think about the math, the transpose Helmert matrix lifts such a point to the hyperplane perpendicular to $\mathbf{1}_D$. How the inverse projects it back to the simplex space is unpredictable. For instance, when $\alpha = 0.5$, the Q space is limited by $-2$ and $4$. Let's consider $\wv = (-3,1,2)$. Obviously, $\wv$ is on the hyperplane but not in the space $\mathbb{Q}$. In this case, the inverse transformation map it back to $0.03846154 0.3461538 0.6153846$, because $1/\alpha$ happens to be an even number. And $0.03846154 0.3461538 0.6153846$ really corresponds to $(-1.25, 0.5, 1)$, within the Q space. However, when $\alpha = 0.7$, the inverse fails to transfer.
