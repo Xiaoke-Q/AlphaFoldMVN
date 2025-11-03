@@ -11,7 +11,8 @@
 #' @returns A matrix with the same dimention of X.
 #'
 #' @export
-#' @examples
+#' @examples X <- c(0.1, 0.6, 0.3) 
+#' alpha_trans(X = X , alpha = 0.7)
 alpha_trans <- function(X, alpha, check_one = TRUE, renorm = FALSE){
   is_vec <- is.null(dim(X))
   if (is.data.frame(X)) X <- as.matrix(X)
