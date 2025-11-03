@@ -2,10 +2,16 @@ Package: AlphaFoldMVN
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+    person("Xiaoke", "Qin", , "Xiaoke.Qin@umanitoba.ca", role = c("aut", "cre"))
+Description: 
+    Provides functions for defining, simulating, and estimating the parameters of 
+    the alpha-folded multivariate normal (MVN) distribution. 
+    The package includes density, random generation, and cumulative 
+    distribution functions, along with parameter estimation routines based 
+    on maximum likelihood and method-of-moments approaches. 
+    Designed for research on non-Gaussian modeling and folded or skewed 
+    multivariate data.
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
