@@ -58,9 +58,24 @@ alpha_trans <- function(X, alpha, check_one = TRUE, renorm = FALSE){
 
 
 
+#' The inverse of alpha_trans
+#'
+#' @param W A numeric vector or matrix. 
+#' If a vector is supplied, it is treated as a single row.
+#' The row sums should be 0.
+#' @param alpha A numeric scalar specifying the transformation parameter.
+#' Values close to 0 (<1e-8) adpot the log-ratio transform.
+#'
+#' @returns A numeric vector or matrix, which is the inverse of W given alpha.
+#'
+#' @export
+#' @examples alpha_inverse(alpha_trans(X = c(0.1, 0.6, 0.3), alpha = 0.7), alpha = 0.7)
 alpha_inverse <- function(W, alpha) {
   is_vec <- is.null(dim(W))
   if (is_vec) W <- matrix(W, nrow = 1L)
+  
+  ws <- rowSums(W)
+  if(any(abs(ws) > 1e-8)) stop("alpha_invers: the row sums of W should be zero.")
 
   D <- ncol(W)
 
