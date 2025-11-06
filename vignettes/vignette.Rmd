@@ -97,11 +97,219 @@ Focus on the transformation between $X$ and $W$. We can see
 ```{r}
 do.call(
   c,
-  lapply(alphas, function(a) sum(which(alpha_inverse(alpha_trans(X= X, alpha = a), alpha = a) - X > 1e-8)))
+  lapply(alphas, function(a) sum(which(alpha_trans_inverse(alpha_trans(X= X, alpha = a), alpha = a)$X - X > 1e-8)))
 )
 ```
 
 The results validate the inverse.
 
 # $\alpha-$folding
-There is one thing we need to pay attention to: the inverse function above works for only $\yv\in\mathbb{Q}_\alpha^{D-a}$. Therefore, for any points outside of the 'triangle' in the plots, there is no interpretation for what the inverse transformation does. If we think about the math, the transpose Helmert matrix lifts such a point to the hyperplane perpendicular to $\mathbf{1}_D$. How the inverse projects it back to the simplex space is unpredictable. For instance, when $\alpha = 0.5$, the Q space is limited by $-2$ and $4$. Let's consider $\wv = (-3,1,2)$. Obviously, $\wv$ is on the hyperplane but not in the space $\mathbb{Q}$. In this case, the inverse transformation map it back to $0.03846154 0.3461538 0.6153846$, because $1/\alpha$ happens to be an even number. And $0.03846154 0.3461538 0.6153846$ really corresponds to $(-1.25, 0.5, 1)$, within the Q space. However, when $\alpha = 0.7$, the inverse fails to transfer.
+There is one thing we need to pay attention to: the inverse function above works for only $\wv = \Hv'\yv$, where $\yv\in\mathbb{Q}_\alpha^{D-a}$. Therefore, for any points outside of the simplex in the plots, there is no interpretation for what the inverse transformation does.
+
+However, we expect the transformation can convert the constrained data points into a regular Euclidean space, and thus we can freely model it with Gaussian distribution.
+
+Folding is such a technique, which assumes a latent space where the observed data could be folded from the points outside of the bounds.
+
+```{r}
+p = matrix(c(0.1, 0.6, 0.3, 0.6, 0.3, 0.1, 0.3, 0.1, 0.6), nrow = 3, byrow = TRUE)
+C <- c(1/3,1/3, 1/3)
+v <- p - C
+t <- seq(0.7, 1.42, length.out = 50)
+x <- apply(v, MARGIN = 1, function(vv) t(C + vv%*%t(t)))
+H <- helmert(3)
+alpha = -0.5
+w <- alpha_trans(x, alpha = alpha)
+W <- rbind(w, alpha_trans(x, alpha = alpha, unfold = TRUE))
+visualize(W = W, 
+          alpha = alpha, 
+          group = rep(c(1,2), each = nrow(w)), 
+          shift = 0)
+```
+
+```{r}
+p = matrix(c(0.1, 0.6, 0.3, 0.6, 0.3, 0.1, 0.3, 0.1, 0.6), nrow = 3, byrow = TRUE)
+C <- c(1/3,1/3, 1/3)
+v <- p - C
+t <- seq(0.7, 1.42, length.out = 50)
+x <- apply(v, MARGIN = 1, function(vv) t(C + vv%*%t(t)))
+H <- helmert(3)
+alpha = 0.5
+w <- alpha_trans(x, alpha = alpha)
+W <- rbind(w, alpha_trans(x, alpha = alpha, unfold = TRUE))
+visualize(W = W, 
+          alpha = alpha, 
+          group = rep(c(1,2), each = nrow(w)), 
+          shift = 0)
+```
+
+# $\alpha-$folding multivariate normal distribution
+With the folding technique, we further assume the latent data points follow multivariate normal dsitribution.
+
+```{r}
+library(Matrix)
+set.seed(1024)
+true_alpha = -0.7 
+mu <- runif(3-1, min = -3, max = 3)
+M <- rsparsematrix(3-1, 3-1, density = 0.2, nnz = (3-1)^2)
+scaling <- runif(1, min = 0, max = 1)
+Sigma <- as.matrix(forceSymmetric(M %*% t(M))) * scaling
+Xl <- rafmvn(n = 500, alpha = true_alpha, mean = mu, sigma = Sigma)
+X <- Xl$X
+folded <- Xl$folded
+
+Y <- X
+Y[folded,] <- alpha_trans(X = X[folded,], alpha = true_alpha, unfold = TRUE)
+Y[!folded,] <- alpha_trans(X = X[!folded,], alpha = true_alpha, unfold = FALSE)
+W <- X
+W <- alpha_trans(X = X, alpha = true_alpha)
+visualize(W =Y, alpha = true_alpha, group = folded+1, shift = 0)
+visualize(W =W, alpha = true_alpha, group = folded+1, shift = 0)
+```
+
+
+# $\alpha-$folding multivariate normal density
+
+```{r}
+library(Matrix)
+library(plotly)
+set.seed(1024)
+true_alpha = 0.7 
+mu <- runif(3-1, min = -3, max = 3)
+M <- rsparsematrix(3-1, 3-1, density = 0.2, nnz = (3-1)^2)
+scaling <- runif(1, min = 0, max = 1)
+Sigma <- as.matrix(forceSymmetric(M %*% t(M))) * scaling
+gr_list <- vector("list", nb * (nb + 1) / 2)
+k <- 0
+for (i in 1:nb) {
+  for (j in 1:(nb - i + 1)) {
+    k <- k + 1
+    gr_list[[k]] <- c(by * i, by * j, 1 - by * i - by * j)
+  }
+}
+grids <- do.call(rbind, gr_list)  
+
+comp_to_cartesian <- function(x) {
+  x <- x / rowSums(x)
+  cbind(x[,2] + 0.5 * x[,3], sqrt(3)/2 * x[,3])
+}
+cart_grids <- comp_to_cartesian(grids) 
+
+z <- dafmvn(X = grids, alpha = true_alpha, mean = mu, sigma = Sigma, log = TRUE)
+
+gr <- with(data.frame(x = cart_grids[,1], y = cart_grids[,2], z = z),
+           akima::interp(x, y, z, duplicate = "mean", nx = 150, ny = 150))
+plot_ly(x = gr$x, y = gr$y, z = gr$z) |>
+  add_markers() |>
+  layout(scene = list(
+    xaxis = list(title = "X"),
+    yaxis = list(title = "Y"),
+    zaxis = list(title = "z")
+  ))
+
+df_grid <- expand.grid(x = gr$x, y = gr$y)
+df_grid$z <- as.vector(gr$z)
+plot_ly(x = df_grid$x, 
+        y = df_grid$y, 
+        z = df_grid$z,
+        type = "scatter3d",
+        mode = "markers",
+        marker = list(size = 2,
+                      color = df_grid$z,
+                      colorscale = "Viridis",
+                      showscale = TRUE)) |>
+  layout(scene = list(
+    xaxis = list(title = "X"),
+    yaxis = list(title = "Y"),
+    zaxis = list(title = "Z")
+  ))
+```
+
+
+# Maximum Likelihood Estimation
+Given $\alpha$, the density parameters $\mu$ and $\Sigma$ are estimated by maximum likelihood estimation.
+
+The data points following $\alpha-$folding multivariate normal can be generated from `rafmvn()`.
+
+```{r}
+library(Matrix)
+library(mvtnorm)
+set.seed(42)
+
+true_alpha <- 0.5
+D = 3
+N = 500
+mu <- runif(D-1, min = -3, max = 3)
+M <- rsparsematrix(D-1, D-1, density = 0.2, nnz = (D-1)^2)
+scaling <- runif(1, min = 0, max = 1)
+Sigma <- as.matrix(forceSymmetric(M %*% t(M))) * scaling
+Xl <- rafmvn(n = N, alpha = true_alpha, mean = mu, sigma = Sigma)
+X <- Xl$X
+folded <- Xl$folded
+W <- alpha_trans(X = X, alpha = true_alpha, unfold = folded)
+visualize(W = W, alpha = true_alpha, group = folded + 1, shift = 0)
+```
+
+The MLE given the correct $\alpha$ is given in the following way.
+
+```{r}
+mle <- afmvn_mle(X = X, alpha = true_alpha)
+MSE <- list(mse_mu = (mle$mu_hat - mu)^2, mse_sigma = (mle$Sigma_hat - Sigma)^2)
+MSE
+```
+
+The esimation of $alpha$ is processed by grid search.
+```{r}
+alpha_r <- alpha_est(X = X, by = 0.01)
+alpha_r$alpha_hat
+plot(alpha_r$loglik)
+```
+
+# Simulation 1
+
+```{r}
+set.seed(42)
+seeds <- sample(1:10000, size = 100)
+true_alpha <- 0.7
+D = 3
+N = 500
+
+mse_mu <- list()
+mse_sigma <- list()
+
+for(i in 1:100){
+  set.seed(seeds[i])
+  mu <- runif(D-1, min = -3, max = 3)
+  M <- rsparsematrix(D-1, D-1, density = 0.2, nnz = (D-1)^2)
+  scaling <- runif(1, min = 0, max = 1)
+  Sigma <- as.matrix(forceSymmetric(M %*% t(M))) * scaling
+  Xl <- rafmvn(n = N, alpha = true_alpha, mean = mu, sigma = Sigma)
+  X <- Xl$X
+  folded <- Xl$folded
+  mle <- afmvn_mle(X = X, alpha = true_alpha,max.iter = 100)
+  mse_mu[[i]] <- (mle$mu_hat - mu)^2
+  mse_sigma[[i]] <- (mle$Sigma_hat - Sigma)^2
+}
+
+problematic <- which(sapply(mse_mu, function(mm) sum(mm)) > 0.1)
+i = problematic[3]
+set.seed(seeds[i])
+mu <- runif(D-1, min = -3, max = 3)
+M <- rsparsematrix(D-1, D-1, density = 0.2, nnz = (D-1)^2)
+scaling <- runif(1, min = 0, max = 1)
+Sigma <- as.matrix(forceSymmetric(M %*% t(M))) * scaling
+Xl <- rafmvn(n = N, alpha = true_alpha, mean = mu, sigma = Sigma)
+X <- Xl$X
+folded <- Xl$folded
+mle <- afmvn_mle(X = X, alpha = true_alpha)
+mse_1 <- (mle$mu_hat - mu)^2
+mse_2 <- (mle$Sigma_hat - Sigma)^2
+W <- alpha_trans(X, alpha = true_alpha, unfold = FALSE)
+W_alpha <- alpha_trans(X, alpha = true_alpha, unfold = folded)
+visualize(W = rbind(W, W_alpha), alpha = true_alpha, group = folded+1, shift = rep(c(0,0.5), each = nrow(W)))
+Xl2 <- rafmvn(n = N, alpha = true_alpha, mean = mle$mu_hat, sigma = mle$Sigma_hat)
+X2 <- Xl2$X
+folded2 <- Xl2$folded
+W2 <- alpha_trans(X2, alpha = true_alpha, unfold = FALSE)
+W_alpha2 <- alpha_trans(X2, alpha = true_alpha, unfold = folded)
+visualize(W = rbind(W2, W_alpha2), alpha = true_alpha, group = folded+1, shift = rep(c(0,-0.5), each = nrow(W)))
+```
