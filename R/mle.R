@@ -21,7 +21,7 @@ afmvn_mle <- function(X,
     Y0 <- W %*% t(H)
     
     mu_hat <- colMeans(Y0)
-    Sigma_hat <- cov(Y0) *(N-1)/N
+    Sigma_hat <- cov(Y0)
 
     return(list(Sigma_hat = Sigma_hat, mu_hat = mu_hat))
   }
@@ -64,22 +64,3 @@ afmvn_mle <- function(X,
 }
 
 
-#' Estimation of alpha
-#'
-#' @param X A n-by-D matrix.
-#' @param by increment of the alphas
-#'
-#' @returns list: alpha_hat is the estimated alpha, loglik is a vector of log-likelihood for each alpha 
-#'
-#' @export
-#' @examples alpha_est(X = X, by = 0.01)
-alpha_est <- function(X, by = 0.01){
-  alphas <- seq(-1, 1, by = 0.01)
-  loglik <- rep(NA, length(alphas))
-  for(i in 1L:length(alphas)){
-    r <- afmvn_mle(X = X, alpha = alphas[i])
-    loglik[i] <- sum(dafmvn(X = X, alpha = alphas[i], mean = r$mu_hat, sigma = r$Sigma_hat))
-  }
-  alpha_hat <- alphas[which.max(loglik)]
-  list(alpha_hat = alpha_hat, loglik = loglik)
-}

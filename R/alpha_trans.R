@@ -90,15 +90,16 @@ alpha_trans_inverse <- function(W, alpha) {
   } else {
     lb <- min(-1/alpha, (D-1)/alpha)
     rb <- max(-1/alpha, (D-1)/alpha)
-    inside_index <- rowSums((W<lb)|(W>rb)) == 0
-    q_alpha_star <- rep(NA, nrow = N)
-    q_alpha_star[!inside_index] <- 
-      apply(W[!inside_index, ,drop = FALSE] * alpha, MARGIN = 1, min)
-    q_alpha_star[inside_index] <- 1
+    inside_index <- (rowSums((W<lb)|(W>rb)) == 0)
+    q_alpha_star <- rep(1, times = N)
+    if(any(!inside_index)){
+      q_alpha_star[!inside_index] <- 
+            apply(W[!inside_index,,drop=FALSE] * alpha, MARGIN = 1, min)
+    }
     M <- W/q_alpha_star^2
 
     base <- 1 + alpha * M
-    base[base < 0 & base > -sqrt(.Machine$double.eps)] <- 0
+    #base[base < 0 & base > -sqrt(.Machine$double.eps)] <- 0
     if (any(base < 0)) {
       stop("alpha_inverse: encountered 1 + alpha*W < 0.")
     }

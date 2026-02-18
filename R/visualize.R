@@ -84,3 +84,71 @@ visualize <- function(W = NULL, alpha, group = NULL, shift = NULL, color = NULL,
   fig
 
 }
+
+#' Visualize observed data X
+#'
+#' @param X A matrix
+#' @param group Group of data
+#' @param color Color
+#'
+#' @returns A plotly object
+#'
+#' @export
+#' @examples visualize_x(X = X)
+visualize_x <- function(X, group = NULL, color = NULL){
+
+  xs <- seq(0, 1, length.out = 60)
+  ys <- seq(0, 1, length.out = 60)
+  zs  <- outer(xs, ys, function(x, y) 1 - x - y)
+  zs[zs < 0] <- NA
+  fig <- plotly::plot_ly(x = ~xs, y = ~ys, z = ~zs) |>
+    plotly::add_surface(opacity = 0.6, showscale = FALSE,
+                colorscale = list(c(0,1), c("lightblue","lightblue")),
+                name = "x+y+z=0")
+  
+  y_line <- seq(0, 1, length.out = 100)
+  z_line <- 1 - y_line
+  x_line <- rep(0, length(y_line))
+  
+  fig <- fig |>
+    plotly::add_trace(x = ~x_line, y = ~y_line, z = ~z_line,
+              type = "scatter3d", mode = "lines",
+              line = list(color = "#4F2C1D", width = 6))
+  
+  x_line2 <- seq(0, 1, length.out = 100)
+  z_line2 <- 1 - x_line2
+  y_line2 <- rep(0, length(x_line2))
+  
+  fig <- fig |>
+    plotly::add_trace(x = ~x_line2, y = ~y_line2, z = ~z_line2,
+              type = "scatter3d", mode = "lines",
+              line = list(color = "#4F2C1D", width = 6))
+  y_line3 <- seq(0, 1, length.out = 100)
+  x_line3 <- 1 - y_line3
+  z_line3 <- rep(0, length(y_line3))
+  
+  fig <- fig |>
+    plotly::add_trace(x = ~x_line3, y = ~y_line3, z = ~z_line3,
+              type = "scatter3d", mode = "lines",
+              line = list(color = "#4F2C1D", width = 6))
+  
+  pal <- c("#F2A900","#385E9D","#7FB5E3", "#F28E2B", "#8C564B", "#E15759")
+    if(is.null(group)){
+      group = rep(1, nrow(X))
+    }
+
+    ng <- length(unique(group))
+    if(is.null(color)) color <- pal[group]
+    
+
+  
+  fig <- fig |>
+    plotly::add_markers(x = X[,1], y = X[,2], z = X[,3],
+        type = "scatter3d",
+        mode = "markers",
+        marker = list(size = 2, 
+          color = color
+        ))
+  
+  fig
+}

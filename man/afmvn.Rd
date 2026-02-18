@@ -22,3 +22,6 @@ A matrix of n rows. Each row is an observation.
 \description{
 The alpha-folding multivariate normal distribution
 }
+\examples{
+rafmvn(n = 50, alpha = 0.7, mean = c(-1,1), sigma = diag(1, 2))
+}
