@@ -12,10 +12,15 @@
 #' @export
 #' @examples visualize(W= W, alpha = 0.7, group = rep(1:3, each = nrow(W)))
 visualize <- function(W = NULL, alpha, group = NULL, shift = NULL, color = NULL, opacity = NULL){
+  pal <- c("#F2A900","#385E9D","#7FB5E3", "#F28E2B", "#8C564B", "#E15759")
+  
   if(!is.null(W)){
-    span <- max(c(abs(W)), abs(1/alpha))
+    if(alpha == 0){
+      span <- max(abs(W))
+    }else{
+      span <- max(c(abs(W)), abs(1/alpha))
+    }
   }
-  span <- abs(1/alpha)
   span <- span * 3
   xs <- seq(-span, span, length.out = 60)
   ys <- seq(-span, span, length.out = 60)
@@ -26,33 +31,34 @@ visualize <- function(W = NULL, alpha, group = NULL, shift = NULL, color = NULL,
                 colorscale = list(c(0,1), c("lightblue","lightblue")),
                 name = "x+y+z=0")
   
-  y_line <- seq(-(1/alpha), (2/alpha), length.out = 100)
-  z_line <- 1/alpha - y_line
-  x_line <- rep(-1/alpha, length(y_line))
-  
-  fig <- fig |>
-    plotly::add_trace(x = ~x_line, y = ~y_line, z = ~z_line,
-              type = "scatter3d", mode = "lines",
-              line = list(color = "#4F2C1D", width = 6))
-  
-  x_line2 <- seq(-(1/alpha), (2/alpha), length.out = 100)
-  z_line2 <- 1/alpha - x_line2
-  y_line2 <- rep(-1/alpha, length(x_line2))
-  
-  fig <- fig |>
-    plotly::add_trace(x = ~x_line2, y = ~y_line2, z = ~z_line2,
-              type = "scatter3d", mode = "lines",
-              line = list(color = "#4F2C1D", width = 6))
-  y_line3 <- seq(-(1/alpha), (2/alpha), length.out = 100)
-  x_line3 <- 1/alpha - y_line3
-  z_line3 <- rep(-1/alpha, length(y_line3))
-  
-  fig <- fig |>
-    plotly::add_trace(x = ~x_line3, y = ~y_line3, z = ~z_line3,
-              type = "scatter3d", mode = "lines",
-              line = list(color = "#4F2C1D", width = 6))
-  
-  pal <- c("#F2A900","#385E9D","#7FB5E3", "#F28E2B", "#8C564B", "#E15759")
+  print(abs(alpha))
+  if(abs(alpha) > 1e-6){
+    y_line <- seq(-(1/alpha), (2/alpha), length.out = 100)
+    z_line <- 1/alpha - y_line
+    x_line <- rep(-1/alpha, length(y_line))
+    
+    fig <- fig |>
+      plotly::add_trace(x = ~x_line, y = ~y_line, z = ~z_line,
+                type = "scatter3d", mode = "lines",
+                line = list(color = "#4F2C1D", width = 6))
+    
+    x_line2 <- seq(-(1/alpha), (2/alpha), length.out = 100)
+    z_line2 <- 1/alpha - x_line2
+    y_line2 <- rep(-1/alpha, length(x_line2))
+    
+    fig <- fig |>
+      plotly::add_trace(x = ~x_line2, y = ~y_line2, z = ~z_line2,
+                type = "scatter3d", mode = "lines",
+                line = list(color = "#4F2C1D", width = 6))
+    y_line3 <- seq(-(1/alpha), (2/alpha), length.out = 100)
+    x_line3 <- 1/alpha - y_line3
+    z_line3 <- rep(-1/alpha, length(y_line3))
+    
+    fig <- fig |>
+      plotly::add_trace(x = ~x_line3, y = ~y_line3, z = ~z_line3,
+                type = "scatter3d", mode = "lines",
+                line = list(color = "#4F2C1D", width = 6))
+  }
 
   if(!is.null(W)){
     if(is.null(group)){

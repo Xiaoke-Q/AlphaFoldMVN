@@ -7,22 +7,27 @@
 #'
 #' @export
 #' @examples alpha_est(X = X, by = 0.01)
-alpha_est <- function(X, by = 0.01, level = NULL){
+alpha_est <- function(X, by = 0.01, level = NULL, initial = list(mode = 'default')){
   alphas <- seq(-1, 1, by = by)
   CI = NULL
-  loglik <- future.apply::future_sapply(
-    alphas,
-    FUN = function(a) {
-      r <- afmvn_mle(X = X, alpha = a)
-      loglik <- sum(dafmvn(X = X, alpha = a,
-               mean = r$mu_hat,
-               sigma = r$Sigma_hat))
-      loglik
-    }
-  )
+loglik <- numeric(length(alphas))
+
+for (i in seq_along(alphas)) {
+  a <- alphas[i]
+
+  r <- afmvn_mle(X = X, alpha = a, initial = initial)
+
+  loglik[i] <- sum(dafmvn(X = X,
+                         alpha = a,
+                         mean = r$mu_hat,
+                         sigma = r$Sigma_hat))
+}
+
   
   m <- which.max(loglik)
   alpha_hat <- alphas[m]
+  lower_bound = NULL
+  upper_bound = NULL
   if(!is.null(level)){
     cut <- max(loglik) - 0.5 * qchisq(level, df = 1)
     diff <- (loglik - cut) > 0

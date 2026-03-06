@@ -4,7 +4,13 @@
 \alias{afmvn_mle}
 \title{MLE of alpha-folding multivariate normal distribution given alpha}
 \usage{
-afmvn_mle(X, alpha, tol = 1e-06, max.iter = 150)
+afmvn_mle(
+  X,
+  alpha,
+  tol = 1e-06,
+  max.iter = 150,
+  initial = list(mode = "default")
+)
 }
 \arguments{
 \item{X}{A n-by-D matrix.}
@@ -14,13 +20,19 @@ afmvn_mle(X, alpha, tol = 1e-06, max.iter = 150)
 \item{tol}{A threshold of alpha. When |alpha| < tol, the clt is adopted.}
 
 \item{max.iter}{The number of alternating iterations of solving for mu and sigma.}
+
+\item{initial}{A list with field \code{mode} in {"default","random","user"}.
+\itemize{
+\item mode="default": use two deterministic starts from z_alpha_1 and z_alpha_2 moments
+\item mode="random": use only random starts independent of data
+fields: n_start, mu_range, jitter, seed (optional)
+\item mode="user": use only user-specified starts
+field: starts = list(list(mu=..., sigma=...), ...)
+}}
 }
 \value{
 A list of estimated mu and sigma.
 }
 \description{
 MLE of alpha-folding multivariate normal distribution given alpha
-}
-\examples{
-afmvn_mle(X = X, alpha = 0.7, tol = 1e-6, max.iter = 150)
 }

@@ -4,7 +4,7 @@
 \alias{alpha_est}
 \title{Estimation of alpha}
 \usage{
-alpha_est(X, by = 0.01, level = NULL)
+alpha_est(X, by = 0.01, level = NULL, initial = list(mode = "default"))
 }
 \arguments{
 \item{X}{A n-by-D matrix.}
