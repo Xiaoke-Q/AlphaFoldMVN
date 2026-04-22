@@ -22,7 +22,10 @@ make_adaptor <- function(warm_band, alpha_repropose,
   Sigma_step <- init_Sigma_step
 
   list(
-    get_tuned = function() list(alpha_m = alpha_m, alpha_s = alpha_s, mu_step = mu_step, Sigma_step = Sigma_step),
+    get_tuned = function() list(alpha_m = alpha_m, 
+                                alpha_s = alpha_s, 
+                                mu_step = mu_step, 
+                                Sigma_step = Sigma_step),
 
     update = function(alpha, acc_a, acc_m, acc_S){
       t <<- t + 1
