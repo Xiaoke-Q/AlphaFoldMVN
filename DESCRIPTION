@@ -23,6 +23,7 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Imports: 
+    fastGHQuad,
     future.apply,
     MASS,
     plotly

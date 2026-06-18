@@ -5,7 +5,7 @@
 #' @param mean A vector. The mean of latent multivariate normal distribution.
 #' @param sigma A symmetric psitive-definite matrix.
 #'
-#' @returns A matrix of n rows. Each row is an observation. 
+#' @returns A list list(X, folded).
 #' @name afmvn
 #' @export
 #' @examples rafmvn(n = 50, alpha = 0.7, mean = c(-1,1), sigma = diag(1, 2))

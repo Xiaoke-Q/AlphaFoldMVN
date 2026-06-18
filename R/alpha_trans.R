@@ -54,8 +54,10 @@ alpha_trans <- function(X, alpha, unfold = FALSE, check_one = TRUE, renorm = FAL
     U <- sweep(A, 1L, denom_log, FUN = "-") 
     W <- (exp(U) - 1) / alpha
     if(length(unfold) == 1) unfold = rep(unfold, nrow(X))
-    W_alpha_star <- apply(alpha*W[unfold,], MARGIN = 1, min)
-    W[unfold,] <- W[unfold,]/(W_alpha_star)^2
+    if (any(unfold)) {
+      W_alpha_star <- apply(alpha * W[unfold, , drop = FALSE], MARGIN = 1L, min)
+      W[unfold, ] <- W[unfold, , drop = FALSE] / (W_alpha_star)^2
+    }
   }
   W
 }
