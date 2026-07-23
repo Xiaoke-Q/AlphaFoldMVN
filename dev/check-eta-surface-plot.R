@@ -50,7 +50,7 @@ r <- out_r$r
 
 
 m_grid <- seq(eta_true - 2, eta_true + 2, length.out = 80)
-log_s_grid <- seq(log(0.005), log(2), length.out = 80)
+log_s_grid <- seq(log(0.0005), log(2), length.out = 80)
 
 surf <- eta_objective_surface(
   X = X, r = r,
@@ -80,6 +80,7 @@ obj <- function(par) {
 
   -res
 }
+
 opt <- optim(
   par = c(m_eta, log(sqrt(s2_eta))),
   fn = obj,
@@ -96,6 +97,25 @@ L_hat <- -opt$value
 
 points(m_eta_hat, 0.5*log(s2_eta_hat), pch = 19, col = 'blue')
 
+eta2 <- .afmvn_update_eta(
+  X = X,
+  m_eta = m_eta,
+  s2_eta = s2_eta,
+  r = r,
+  m_q = m_q,
+  Psi_q = Psi_q,
+  nu_q = nu_q,
+  a0 = 0,
+  s0_sq = 10,
+  n_quad = 20L,
+  eps_alpha = 1e-8,
+  control = list(maxit = 300)
+)
+
+eta2$m_eta
+opt$par[1]
+eta2$s2_eta
+exp(2*opt$par[2])
 
 
 k_bad <- which.min(surf$L[1,])

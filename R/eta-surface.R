@@ -114,7 +114,7 @@ plot.afmvn_eta_surface <- function(x,
       nlevels = nlevels,
       ...
     )
-  } else {
+  }else{
     graphics::contour(
       x = x$m_grid,
       y = x$log_s_grid,

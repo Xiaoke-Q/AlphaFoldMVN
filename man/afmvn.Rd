@@ -17,7 +17,7 @@ rafmvn(n = 1, alpha, mean, sigma)
 \item{sigma}{A symmetric psitive-definite matrix.}
 }
 \value{
-A matrix of n rows. Each row is an observation.
+A list list(X, folded).
 }
 \description{
 The alpha-folding multivariate normal distribution

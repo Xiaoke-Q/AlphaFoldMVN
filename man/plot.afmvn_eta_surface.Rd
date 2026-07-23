@@ -17,7 +17,7 @@
 
 \item{image}{Logical. If \code{TRUE}, draw an image heatmap before contours.}
 
-\item{...}{Additional arguments passed to \code{\link[graphics:contour]{graphics::contour()}}.}
+\item{...}{Additional argument.}
 }
 \value{
 Invisibly returns \code{x}.

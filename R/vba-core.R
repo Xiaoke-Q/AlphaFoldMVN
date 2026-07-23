@@ -21,7 +21,7 @@
 .afmvn_row_softmax <- function(score) {
   score <- as.matrix(score)
 
-  row_max <- apply(score, 1L, max)
+  row_max <- apply(score, 1, max)
 
   exp_score <- exp(score - row_max)
   exp_score / rowSums(exp_score)
