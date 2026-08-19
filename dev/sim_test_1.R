@@ -51,7 +51,7 @@ fit <- afmvn_vba(
   eps_alpha = 1e-8,
   eta_control = list(maxit = 150L),
   max_iter = 200, 
-  tol = 1e-5
+  tol = 1e-8
 )
 
 fit$trace

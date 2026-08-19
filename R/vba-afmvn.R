@@ -1,45 +1,55 @@
-.afmvn_vb_step <- function(X,
+.afmvn_vb_step <- function(data_ctx, gh_ctx,
                            m_eta, s2_eta,
-                           m_q, kappa_q, Psi_q, nu_q,
-                           m_0, kappa_0, Psi_0, nu_0,
+                           m_q, Psi_q, nu_q,
+                           m_0, kappa_0, Psi_0_inv, nu_0,
                            a_0 = 0, s0_sq = 10,
                            n_quad = 20L,
                            eps_alpha = 1e-8,
                            eta_control = list(maxit = 300L)) {
-  mbj <- .afmvn_components_qeta(
-    X = X,
+  r_quad_ctx <- .afmvn_quad_context(m_q = m_q, Psi_q = Psi_q)
+
+  r_stats <- .afmvn_r_stats(
+    data_ctx = data_ctx,
+    gh_ctx = gh_ctx,
     m_eta = m_eta,
     s2_eta = s2_eta,
-    n_quad = n_quad,
+    quad_ctx = r_quad_ctx,
     eps_alpha = eps_alpha
-  )
-
-  r_quad_ctx <- .afmvn_quad_context(m_q = m_q, Psi_q = Psi_q)
-  r_quad <- .afmvn_quad_from_mbj(mbj = mbj, quad_ctx = r_quad_ctx)
+  )  
 
   r_out <- .afmvn_update_r(
-    mbj = mbj,
-    nu_q = nu_q,
-    quad = r_quad
-  )
+    J = r_stats$J,
+    quad = r_stats$quad,
+    nu_q = nu_q
+  )  
+
+  nw_stats <- .afmvn_nw_stats(
+    data_ctx = data_ctx,
+    gh_ctx = gh_ctx,
+    m_eta = m_eta,
+    s2_eta = s2_eta,
+    r = r_out$r,
+    eps_alpha = eps_alpha
+  )  
 
   nw_out <- .afmvn_update_nw(
-    M = mbj$M,
-    B = mbj$B,
-    r = r_out$r,
+    M_sum = nw_stats$M_sum,
+    B_sum = nw_stats$B_sum,
+    N = data_ctx$N,
     m_0 = m_0,
     kappa_0 = kappa_0,
-    Psi_0 = Psi_0,
+    Psi_0_inv = Psi_0_inv,
     nu_0 = nu_0
   )
-
+  
   eta_quad_ctx <- .afmvn_quad_context(
     m_q = nw_out$m_q,
     Psi_q = nw_out$Psi_q
   )
 
   eta_out <- .afmvn_update_eta(
-    X = X,
+    data_ctx = data_ctx,
+    gh_ctx = gh_ctx,
     m_eta = m_eta,
     s2_eta = s2_eta,
     r = r_out$r,
@@ -115,11 +125,15 @@ afmvn_vba <- function(X,
   D <- ncol(X)
   p <- D - 1
   
+  logX <- log(X)
   data_ctx <- list(
     X = as.matrix(X),
-    logX = log(X),
-    logX_sum = rowSums(log(X)),
-    H = helmert(D)
+    logX = logX,
+    logX_sum = rowSums(logX),
+    H = helmert(D),
+    D = D,
+    N = nrow(X),
+    p = p
   )
   
   gh <- fastGHQuad::gaussHermiteData(n_quad)
@@ -147,7 +161,8 @@ afmvn_vba <- function(X,
   for (iter in seq_len(max_iter)) {
     state_old <- state
     state <- .afmvn_vb_step(
-      X = X,
+      data_ctx = data_ctx,
+      gh_ctx = gh_ctx,
       m_eta = state_old$m_eta,
       s2_eta = state_old$s2_eta,
       m_q = state_old$m_q,
@@ -155,7 +170,7 @@ afmvn_vba <- function(X,
       nu_q = state_old$nu_q,
       m_0 = m_0,
       kappa_0 = kappa_0,
-      Psi_0 = Psi_0,
+      Psi_0_inv = Psi_0_inv,
       nu_0 = nu_0,
       a_0 = a_0,
       s0_sq = s0_sq,
