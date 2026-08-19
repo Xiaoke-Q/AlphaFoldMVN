@@ -14,13 +14,13 @@
     eps_alpha = eps_alpha
   )
 
+  r_quad_ctx <- .afmvn_quad_context(m_q = m_q, Psi_q = Psi_q)
+  r_quad <- .afmvn_quad_from_mbj(mbj = mbj, quad_ctx = r_quad_ctx)
+
   r_out <- .afmvn_update_r(
-    M = mbj$M,
-    B = mbj$B,
-    J = mbj$J,
-    m_q = m_q,
-    Psi_q = Psi_q,
-    nu_q = nu_q
+    mbj = mbj,
+    nu_q = nu_q,
+    quad = r_quad
   )
 
   nw_out <- .afmvn_update_nw(
@@ -33,13 +33,17 @@
     nu_0 = nu_0
   )
 
+  eta_quad_ctx <- .afmvn_quad_context(
+    m_q = nw_out$m_q,
+    Psi_q = nw_out$Psi_q
+  )
+
   eta_out <- .afmvn_update_eta(
     X = X,
     m_eta = m_eta,
     s2_eta = s2_eta,
     r = r_out$r,
-    m_q = nw_out$m_q,
-    Psi_q = nw_out$Psi_q,
+    quad_ctx = eta_quad_ctx,
     nu_q = nw_out$nu_q,
     a0 = a_0,
     s0_sq = s0_sq,
@@ -70,6 +74,32 @@
   max(abs(new - old) / (1 + abs(old)))
 }
 
+#' Variational Bayes for the AFMVN model
+#'
+#' Fits the AFMVN model using variational Bayes.
+#'
+#' @param X Data matrix.
+#' @param m_eta_init Initial mean of q(eta).
+#' @param s2_eta_init Initial variance of q(eta).
+#' @param m_q_init Initial mean vector of q(mu, Lambda).
+#' @param Psi_q_init Initial Wishart scale matrix.
+#' @param nu_q_init Initial Wishart degrees of freedom.
+#' @param m_0 Prior mean vector.
+#' @param kappa_0 Prior scaling parameter.
+#' @param Psi_0 Prior Wishart scale matrix.
+#' @param nu_0 Prior Wishart degrees of freedom.
+#' @param a_0 Prior mean of eta.
+#' @param s0_sq Prior variance of eta.
+#' @param n_quad Number of quadrature nodes.
+#' @param eps_alpha Small value used for numerical stability.
+#' @param eta_control Control list passed to the eta optimization.
+#' @param max_iter Maximum number of VB iterations.
+#' @param tol Convergence tolerance.
+#'
+#' @return A list containing the variational parameter estimates, iteration trace,
+#' number of iterations, and convergence indicator.
+#'
+#' @export
 afmvn_vba <- function(X,
                       m_eta_init, s2_eta_init,
                       m_q_init, Psi_q_init, nu_q_init,

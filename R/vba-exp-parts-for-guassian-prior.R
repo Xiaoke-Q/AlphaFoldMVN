@@ -18,9 +18,10 @@
 
   W0 <- alpha_trans(X, alpha = alpha, unfold = FALSE)
   W_alpha_star <- apply(alpha*W0, MARGIN = 1, min)
+  H <- helmert(D)
 
-  z0 <- alpha_fold(X = X, alpha = alpha, unfold = FALSE)
-  z1 <- alpha_fold(X = X, alpha = alpha, unfold = TRUE)
+  z0 <- W0 %*% t(H)
+  z1 <- (W0 / W_alpha_star^2) %*% t(H)
 
 
   logJ0 <- (D - 0.5)*log(D) + (alpha - 1)*rowSums(log(X)) - D*log(rowSums(X^alpha))
@@ -57,12 +58,14 @@
 
   N <- nrow(z)
 
-  J[, branch] <- J[, branch] + weight*logJ
+  M[, branch, ] <- M[, branch, ] + weight * z
+  J[, branch] <- J[, branch] + weight * logJ
 
-  for (i in 1:N) {
-    z_i <- z[i,]
-    M[i, branch, ] <- M[i, branch, ] + weight*z_i
-    B[i, branch, , ] <- B[i, branch, , ] + weight*tcrossprod(z_i)
+  p <- ncol(z)
+  for (a in seq_len(p)) {
+    for (b in seq_len(p)) {
+      B[, branch, a, b] <- B[, branch, a, b] + weight * z[, a] * z[, b]
+    }
   }
 
   list(M = M, B = B, J = J)

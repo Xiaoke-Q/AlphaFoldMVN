@@ -1,21 +1,36 @@
-.afmvn_branch_scores <- function(M, B, J, m_q, Psi_q, nu_q) {
-  N <- dim(M)[1]
-  p <- dim(M)[3]
+.afmvn_quad_context <- function(m_q, Psi_q) {
+  m_q <- as.numeric(m_q)
+  Psi_q <- as.matrix(Psi_q)
 
-  score <- matrix(NA, nrow = N, ncol = 2)
-  c_q <- as.numeric(t(m_q)%*%Psi_q%*%m_q)
-  v_q <- as.numeric(Psi_q%*%m_q)
+  Psi_m <- as.numeric(Psi_q %*% m_q)
 
-  for (g in 1:2) {
-    for (i in seq_len(N)) {
-      M_ig <- M[i, g, ]
-      B_ig <- B[i, g, , ]
+  list(
+    Psi_m = Psi_m,
+    c_q = drop(crossprod(m_q, Psi_m)),
+    vec_Psi_t = as.vector(t(Psi_q))
+  )
+}
 
-      quad_ig <- sum(Psi_q * t(B_ig)) - 2*sum(v_q*M_ig) + c_q
-      score[i, g] <- J[i, g] - 0.5*nu_q*quad_ig
-    }
-  }
-  score
+.afmvn_quad_from_mbj <- function(mbj, quad_ctx) {
+  M <- mbj$M
+  B <- mbj$B
+
+  N <- dim(M)[1L]
+  G <- dim(M)[2L]
+  p <- dim(M)[3L]
+
+  M_flat <- matrix(M, nrow = N * G, ncol = p)
+  B_flat <- matrix(B, nrow = N * G, ncol = p * p)
+
+  quad <- drop(B_flat %*% quad_ctx$vec_Psi_t) -
+    2 * drop(M_flat %*% quad_ctx$Psi_m) +
+    quad_ctx$c_q
+
+  matrix(quad, nrow = N, ncol = G)
+}
+
+.afmvn_branch_scores <- function(mbj, quad, nu_q) {
+  mbj$J - 0.5 * nu_q * quad
 }
 
 .afmvn_row_softmax <- function(score) {
@@ -27,10 +42,21 @@
   exp_score / rowSums(exp_score)
 }
 
-.afmvn_update_r <- function(M, B, J, m_q, Psi_q, nu_q) {
-  
-  score <- .afmvn_branch_scores(M=M, B = B, J = J, m_q = m_q, Psi_q = Psi_q, nu_q = nu_q)
+.afmvn_update_r <- function(mbj, nu_q, quad = NULL,
+                            quad_ctx = NULL, m_q = NULL, Psi_q = NULL) {
+  if (is.null(quad)) {
+    if (is.null(quad_ctx)) {
+      if (is.null(m_q) || is.null(Psi_q)) {
+        stop("Provide either quad, quad_ctx, or both m_q and Psi_q.", call. = FALSE)
+      }
+      quad_ctx <- .afmvn_quad_context(m_q = m_q, Psi_q = Psi_q)
+    }
+
+    quad <- .afmvn_quad_from_mbj(mbj = mbj, quad_ctx = quad_ctx)
+  }
+
+  score <- .afmvn_branch_scores(mbj = mbj, quad = quad, nu_q = nu_q)
   r_new <- .afmvn_row_softmax(score)
 
-  list(r = r_new, score = score)
+  list(r = r_new, score = score, quad = quad)
 }

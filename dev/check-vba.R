@@ -5,8 +5,8 @@ set.seed(1)
 alpha_true <- 0.7
 eta_true <- atanh(alpha_true)
 
-mean_true <- c(-1, 1)
-sigma_true <- diag(2)
+mean_true <- c(-1, 1 ,0, 0.5, 0.7)
+sigma_true <- diag(5)
 
 sim <- rafmvn(
   n = 200,
@@ -47,8 +47,9 @@ fit <- afmvn_vba(
   nu_0 = nu_0,
   a_0 = 0,
   s0_sq = 10,
-  n_quad = 20,
-  eps_alpha = 1e-8
+  n_quad = 15,
+  eps_alpha = 1e-8,
+  eta_control = list(maxit = 150L)
 )
 
 fit$trace

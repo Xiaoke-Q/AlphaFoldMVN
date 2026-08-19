@@ -8,58 +8,70 @@
   -0.5*(log(s0_sq / s2_eta) + (s2_eta + (m_eta - a0)^2) / s0_sq - 1)
 }
 
+
 .afmvn_eta_objective <- function(X, m_eta, s2_eta, r,
-                                 m_q, Psi_q, nu_q,
+                                 quad_ctx, nu_q,
                                  a0 = 0, s0_sq = 10,
                                  n_quad = 20L, eps_alpha = 1e-8) {
   X <- as.matrix(X)
   r <- as.matrix(r)
-  Psi_q <- as.matrix(Psi_q)
 
-  N <- nrow(X)
-  D <- ncol(X)
-  p <- D - 1
+  mbj <- .afmvn_components_qeta(
+    X = X,
+    m_eta = m_eta,
+    s2_eta = s2_eta,
+    n_quad = n_quad,
+    eps_alpha = eps_alpha
+  )
 
-  mbj <- .afmvn_components_qeta(X = X, m_eta = m_eta, s2_eta = s2_eta, n_quad = n_quad, eps_alpha = eps_alpha)
-  M <- mbj$M
-  B <- mbj$B
-  J <- mbj$J
+  quad <- .afmvn_quad_from_mbj(mbj = mbj, quad_ctx = quad_ctx)
 
-  KL_term <- .afmvn_eta_prior_KL(m_eta = m_eta, s2_eta = s2_eta, a0 = a0, s0_sq = s0_sq)
-  j_term <- sum(r*J)
+  KL_term <- .afmvn_eta_prior_KL(
+    m_eta = m_eta,
+    s2_eta = s2_eta,
+    a0 = a0,
+    s0_sq = s0_sq
+  )
 
-  quad_term <- 0
-  for (i in 1:N) {
-    for (g in 1:2) {
-      M_ig <- M[i, g, ]
-      B_ig <- B[i, g, , ]
+  j_term <- sum(r * mbj$J)
+  quad_term <- sum(r * quad)
 
-      quad_ig <- sum(Psi_q * t(B_ig)) -
-        2*as.numeric(t(m_q)%*%Psi_q%*%M_ig) +
-        as.numeric(t(m_q)%*%Psi_q%*%m_q)
-      quad_term <- quad_term + r[i, g] * quad_ig
-    }
-  }
-
-  KL_term + j_term - 0.5*nu_q*quad_term
+  KL_term + j_term - 0.5 * nu_q * quad_term
 }
 
 
-
 .afmvn_update_eta <- function(X, m_eta, s2_eta, r,
-                              m_q, Psi_q, nu_q,
+                              m_q = NULL, Psi_q = NULL, nu_q = NULL,
+                              quad_ctx = NULL,
                               a0 = 0, s0_sq = 10,
                               n_quad = 20L,
                               eps_alpha = 1e-8,
                               control = list(maxit = 300L)) {
+  if (is.null(nu_q)) {
+    stop("nu_q must be provided.", call. = FALSE)
+  }
+
+  if (is.null(quad_ctx)) {
+    if (is.null(m_q) || is.null(Psi_q)) {
+      stop("Provide either quad_ctx or both m_q and Psi_q.", call. = FALSE)
+    }
+
+    quad_ctx <- .afmvn_quad_context(m_q = m_q, Psi_q = Psi_q)
+  }
+  
   objective_neg <- function(par){
     m_eta_cur <- par[1L]
     s2_eta_cur <- exp(par[2L])
 
     value <- .afmvn_eta_objective(
-      X = X, m_eta = m_eta_cur, s2_eta = s2_eta_cur, r = r,
-      m_q = m_q, Psi_q = Psi_q, nu_q = nu_q,
-      a0 = a0, s0_sq = s0_sq,
+      X = X,
+      m_eta = m_eta_cur,
+      s2_eta = s2_eta_cur,
+      r = r,
+      quad_ctx = quad_ctx,
+      nu_q = nu_q,
+      a0 = a0,
+      s0_sq = s0_sq,
       n_quad = n_quad,
       eps_alpha = eps_alpha
     )
