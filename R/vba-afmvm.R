@@ -109,6 +109,28 @@ afmvn_vba <- function(X,
                       eps_alpha = 1e-8,
                       eta_control = list(maxit = 300L),
                       max_iter = 150, tol = 1e-3) {
+  X <- as.matrix(X)
+  if (any(X <= 0)) stop("X must be strictly positive.")
+  if (any(abs(rowSums(X) - 1) > 1e-8)) stop("Rows of X must sum to 1.")
+  D <- ncol(X)
+  p <- D - 1
+  
+  data_ctx <- list(
+    X = as.matrix(X),
+    logX = log(X),
+    logX_sum = rowSums(log(X)),
+    H = helmert(D)
+  )
+  
+  gh <- fastGHQuad::gaussHermiteData(n_quad)
+  gh_ctx <- list(
+    x = gh$x,
+    weight = gh$w/sqrt(pi)
+  )
+  
+  Psi_0_inv <- solve(Psi_0)
+
+
   state <- list(
     m_eta = m_eta_init,
     s2_eta = s2_eta_init,

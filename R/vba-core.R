@@ -5,6 +5,7 @@
   Psi_m <- as.numeric(Psi_q %*% m_q)
 
   list(
+    Psi_q = Psi_q,
     Psi_m = Psi_m,
     c_q = drop(crossprod(m_q, Psi_m)),
     vec_Psi_t = as.vector(t(Psi_q))
@@ -40,6 +41,10 @@
 
   exp_score <- exp(score - row_max)
   exp_score / rowSums(exp_score)
+}
+
+.afmvn_quad_rows <- function(z, quad_ctx) {
+  rowSums((z %*% quad_ctx$Psi_q) * z) - 2 * drop(z %*% quad_ctx$Psi_m) + quad_ctx$c_q
 }
 
 .afmvn_update_r <- function(mbj, nu_q, quad = NULL,

@@ -8,39 +8,35 @@
   -0.5*(log(s0_sq / s2_eta) + (s2_eta + (m_eta - a0)^2) / s0_sq - 1)
 }
 
-
-.afmvn_eta_objective <- function(X, m_eta, s2_eta, r,
+.afmvn_eta_objective <- function(data_ctx, gh_ctx, 
+                                 m_eta, s2_eta, r,
                                  quad_ctx, nu_q,
                                  a0 = 0, s0_sq = 10,
                                  n_quad = 20L, eps_alpha = 1e-8) {
-  X <- as.matrix(X)
-  r <- as.matrix(r)
+  q <- .eta_quadrature(m_eta = m_eta, s2_eta = s2_eta, gh_ctx = gh_ctx)
 
-  mbj <- .afmvn_components_qeta(
-    X = X,
-    m_eta = m_eta,
-    s2_eta = s2_eta,
-    n_quad = n_quad,
-    eps_alpha = eps_alpha
-  )
+  value <- 0
 
-  quad <- .afmvn_quad_from_mbj(mbj = mbj, quad_ctx = quad_ctx)
+  for (ell in seq_along(q$eta)) {
+    comp <- .afmvn_components_eta(data_ctx, eta = q$eta[ell], eps_alpha = eps_alpha)
 
-  KL_term <- .afmvn_eta_prior_KL(
-    m_eta = m_eta,
-    s2_eta = s2_eta,
-    a0 = a0,
-    s0_sq = s0_sq
-  )
+    quad0 <- .afmvn_quad_rows(comp$z0, quad_ctx)
+    node_value <- sum(r[, 1] * (comp$logJ0 - 0.5 * nu_q * quad0))
 
-  j_term <- sum(r * mbj$J)
-  quad_term <- sum(r * quad)
+    if (!isTRUE(comp$near_zero)) {
+      quad1 <- .afmvn_quad_rows(comp$z1, quad_ctx)
+      node_value <- node_value + sum(r[, 2] * (comp$logJ1 - 0.5 * nu_q * quad1))
+    }
 
-  KL_term + j_term - 0.5 * nu_q * quad_term
+    value <- value + q$weight[ell] * node_value
+  }
+
+  .afmvn_eta_prior_KL(m_eta = m_eta, s2_eta = s2_eta, a0 = a0, s0_sq = s0_sq) + value
 }
 
 
-.afmvn_update_eta <- function(X, m_eta, s2_eta, r,
+.afmvn_update_eta <- function(data_ctx, gh_ctx,
+                              m_eta, s2_eta, r,
                               m_q = NULL, Psi_q = NULL, nu_q = NULL,
                               quad_ctx = NULL,
                               a0 = 0, s0_sq = 10,
@@ -64,7 +60,8 @@
     s2_eta_cur <- exp(par[2L])
 
     value <- .afmvn_eta_objective(
-      X = X,
+      data_ctx = data_ctx,
+      gh_ctx = gh_ctx,
       m_eta = m_eta_cur,
       s2_eta = s2_eta_cur,
       r = r,

@@ -1,7 +1,11 @@
-.afmvn_components_alpha <- function(X, alpha, eps_alpha = 1e-6) {
-  D <- ncol(X)
-  N <- nrow(X)
-
+.afmvn_components_alpha <- function(data_ctx, alpha, eps_alpha = 1e-8) {
+  X <- data_ctx$X
+  logX <- data_ctx$logX
+  logX_sum <- data_ctx$logX_sum
+  D <- data_ctx$D
+  N <- data_ctx$N
+  Ht <- data_ctx$Ht
+  
   if (abs(alpha) < eps_alpha) {
     z0 <- alpha_fold(X = X, alpha = 0, unfold = FALSE)
     logJ0 <- -rowSums(log(X)) - 0.5 * log(D)
@@ -16,16 +20,23 @@
     ))
   }
 
-  W0 <- alpha_trans(X, alpha = alpha, unfold = FALSE)
-  W_alpha_star <- apply(alpha*W0, MARGIN = 1, min)
-  H <- helmert(D)
 
-  z0 <- W0 %*% t(H)
-  z1 <- (W0 / W_alpha_star^2) %*% t(H)
+  A <- alpha*logX
+  amax <- apply(A, 1, max)
+  log_mean <- amax + log(rowMeans(exp(A - amax)))
 
+  U <- sweep(A, 1, log_mean, "-")
+  W0 <- (exp(U) - 1)/alpha
 
-  logJ0 <- (D - 0.5)*log(D) + (alpha - 1)*rowSums(log(X)) - D*log(rowSums(X^alpha))
-  logJ1 <- logJ0 - 2*(D - 1) * log(abs(W_alpha_star))
+  W_alpha_star <- apply(alpha * W0, 1, min)
+
+  z0 <- W0 %*% Ht
+  z1 <- (W0/W_alpha_star^2) %*% Ht
+
+  log_sum <- log_mean + log(D)
+
+  logJ0 <- (D - 0.5) * log(D) + (alpha - 1) * logX_sum - D * log_sum
+  logJ1 <- logJ0 - 2 * (D - 1) * log(abs(W_alpha_star))
 
   list(
     alpha = alpha,
@@ -38,14 +49,10 @@
   )
 }
 
-.afmvn_components_eta <- function(X, eta, eps_alpha = 1e-8) {
-  if (!is.numeric(eta) || length(eta) != 1L || !is.finite(eta)) {
-    stop("eta must be a finite numeric scalar.", call. = FALSE)
-  }
-
+.afmvn_components_eta <- function(data_ctx, eta, eps_alpha = 1e-8) {
   alpha <- tanh(eta)
   comp <- .afmvn_components_alpha(
-    X = X,
+    data_ctx = data_ctx,
     alpha = alpha,
     eps_alpha = eps_alpha
   )
@@ -71,16 +78,14 @@
   list(M = M, B = B, J = J)
 }
 
-.afmvn_components_qeta <- function(X, m_eta, s2_eta, n_quad = 20L, eps_alpha = 1e-8) {
-  X <- as.matrix(X)
-  N <- nrow(X)
-  D <- ncol(X)
-  p <- D - 1
+.afmvn_components_qeta <- function(data_ctx, gh_ctx, m_eta, s2_eta, n_quad = 20L, eps_alpha = 1e-8) {
+  N <- data_ctx$N
+  p <- data_ctx$p
 
   q <- .eta_quadrature(
     m_eta = m_eta,
     s2_eta = s2_eta,
-    n_quad = n_quad
+    gh_ctx = gh_ctx
   )
 
   M <- array(0, dim = c(N, 2, p))
@@ -90,7 +95,7 @@
   near_zero_node <- logical(length(q$eta))
 
   for (ell in seq_along(q$eta)) {
-    comp <- .afmvn_components_eta(X = X, eta = q$eta[ell], eps_alpha = eps_alpha)
+    comp <- .afmvn_components_eta(data_ctx = data_ctx, eta = q$eta[ell], eps_alpha = eps_alpha)
 
     near_zero_node[ell] <- isTRUE(comp$near_zero)
     w <- q$weight[ell]
