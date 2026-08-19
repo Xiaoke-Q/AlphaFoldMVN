@@ -12,7 +12,7 @@
                                  m_eta, s2_eta, r,
                                  quad_ctx, nu_q,
                                  a0 = 0, s0_sq = 10,
-                                 n_quad = 20L, eps_alpha = 1e-8) {
+                                 eps_alpha = 1e-8) {
   q <- .eta_quadrature(m_eta = m_eta, s2_eta = s2_eta, gh_ctx = gh_ctx)
 
   value <- 0
@@ -40,7 +40,6 @@
                               m_q = NULL, Psi_q = NULL, nu_q = NULL,
                               quad_ctx = NULL,
                               a0 = 0, s0_sq = 10,
-                              n_quad = 20L,
                               eps_alpha = 1e-8,
                               control = list(maxit = 300L)) {
   if (is.null(nu_q)) {
@@ -69,7 +68,6 @@
       nu_q = nu_q,
       a0 = a0,
       s0_sq = s0_sq,
-      n_quad = n_quad,
       eps_alpha = eps_alpha
     )
     -value
@@ -94,7 +92,8 @@
     s2_eta = s2_eta_new,
     log_s2_eta = opt$par[2],
     objective_old = value_old,
-    objective = value_new
+    objective = value_new,
+    convergence = opt$convergence
   )
 }
 

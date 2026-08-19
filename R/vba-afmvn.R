@@ -3,7 +3,6 @@
                            m_q, Psi_q, nu_q,
                            m_0, kappa_0, Psi_0_inv, nu_0,
                            a_0 = 0, s0_sq = 10,
-                           n_quad = 20L,
                            eps_alpha = 1e-8,
                            eta_control = list(maxit = 300L)) {
   r_quad_ctx <- .afmvn_quad_context(m_q = m_q, Psi_q = Psi_q)
@@ -57,7 +56,6 @@
     nu_q = nw_out$nu_q,
     a0 = a_0,
     s0_sq = s0_sq,
-    n_quad = n_quad,
     eps_alpha = eps_alpha,
     control = eta_control
   )
@@ -174,7 +172,6 @@ afmvn_vba <- function(X,
       nu_0 = nu_0,
       a_0 = a_0,
       s0_sq = s0_sq,
-      n_quad = n_quad,
       eps_alpha = eps_alpha,
       eta_control = eta_control
     )
